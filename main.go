@@ -7,9 +7,14 @@ import (
 )
 
 func main() {
-	log.Println("Servidor iniciado na porta 8080")
-	err := http.ListenAndServe(":8080", proxy.NewProxy())
+	proxyHandler, err := proxy.NewProxy()
 	if err != nil {
-		log.Fatal("Erro ao iniciar o servidor:", err)
+		log.Fatal("Erro ao iniciar o proxy:", err)
+	}
+
+	log.Println("Servidor proxy rodando na porta 8080...")
+	err = http.ListenAndServe(":8080", proxyHandler)
+	if err != nil {
+		log.Fatal("Erro ao iniciar o servidor proxy:", err)
 	}
 }

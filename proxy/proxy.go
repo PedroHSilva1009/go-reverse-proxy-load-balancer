@@ -1,25 +1,38 @@
 package proxy
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
+	"os"
 )
 
-var backendURL = "http://localhost:8081"
+type Config struct {
+	Algorithm string `json:"algorithm"`
+}
 
-// NewProxy cria um handler de proxy reverso
-func NewProxy() http.Handler {
-	target, err := url.Parse(backendURL)
+func loadConfig() (*Config, error) {
+	file, err := os.ReadFile("config.json")
 	if err != nil {
-		panic(err)
+		return nil, err
+	}
+	var config Config
+	err = json.Unmarshal(file, &config)
+	return &config, err
+}
+
+func NewProxy() (http.Handler, error) {
+	config, err := loadConfig()
+	if err != nil {
+		return nil, fmt.Errorf("erro ao carregar configuração: %v", err)
 	}
 
-	proxy := httputil.NewSingleHostReverseProxy(target)
-
-	// Middleware pra customizar o comportamento do proxy
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r.Host = target.Host 
-		proxy.ServeHTTP(w, r)
-	})
+	switch config.Algorithm {
+	case "roundrobin":
+		return NewRoundRobinProxy(), nil
+	case "leastconn":
+		return NewLeastConnectionsProxy(), nil
+	default:
+		return nil, fmt.Errorf("algoritmo de balanceamento inválido: %s", config.Algorithm)
+	}
 }
